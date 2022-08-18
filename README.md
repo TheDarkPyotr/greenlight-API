@@ -1,2 +1,8 @@
-# greenlight-API
+## greenlight-API
 WIP
+
+
+### Project structure
+TODO
+
+### API Endpoints
