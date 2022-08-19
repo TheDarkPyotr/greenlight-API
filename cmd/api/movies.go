@@ -177,3 +177,45 @@ func (app *application) deleteMovieHandler(w http.ResponseWriter, r *http.Reques
 
 	}
 }
+
+// "GET /v1/movies" endpoint
+func (app *application) listMoviesHandler(w http.ResponseWriter, r *http.Request) {
+
+	var input struct {
+		Title  string
+		Genres []string
+		data.Filters
+	}
+
+	v := validator.New()
+	queryString := r.URL.Query()
+
+	input.Title = app.readString(queryString, "title", "")
+	input.Genres = app.readCSV(queryString, "genres", []string{})
+
+	input.Filters.Page = app.readInt(queryString, "page", 1, v)
+	input.Filters.PageSize = app.readInt(queryString, "page_size", 20, v)
+
+	// Extract the sort query string value, falling back to "id" if it is not provided
+	// by the client (which will imply a ascending sort on movie ID).
+	input.Filters.Sort = app.readString(queryString, "sort", "id")
+
+	input.Filters.SortSafeList = []string{"id", "title", "year", "runtime", "-id", "-title", "-year", "-runtime"}
+
+	if data.ValidateFilters(v, input.Filters); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	movies, metadata, err := app.models.Movies.GetAll(input.Title, input.Genres, input.Filters)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+	err = app.writeJSON(w, http.StatusOK, envelope{"movies": movies, "metadata": metadata}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+
+	//fmt.Fprintf(w, "%+v\n", input)
+}

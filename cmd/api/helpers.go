@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/julienschmidt/httprouter"
+	"greenlight/internal/validator"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -110,4 +112,36 @@ func (app *application) readIDParam(r *http.Request) (int64, error) {
 
 	return id, nil
 
+}
+
+//------------ Helpers for filtering, pagination and sorting -------------
+func (app *application) readString(queryString url.Values, key string, defaultValue string) string {
+	s := queryString.Get(key)
+	if s == "" {
+		return defaultValue
+	}
+	return s
+
+}
+
+func (app *application) readCSV(queryString url.Values, key string, defaultValue []string) []string {
+	csv := queryString.Get(key)
+	if csv == "" {
+		return defaultValue
+	}
+	return strings.Split(csv, ",")
+}
+
+func (app *application) readInt(queryString url.Values, key string, defaultValue int, v *validator.Validator) int {
+	s := queryString.Get(key)
+	if s == "" {
+		return defaultValue
+	}
+
+	number, err := strconv.Atoi(s)
+	if err != nil {
+		v.AddError(key, "must be an integer value")
+		return defaultValue
+	}
+	return number
 }
